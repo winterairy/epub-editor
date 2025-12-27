@@ -116,58 +116,59 @@ epub-reader/
 │   │   ├── main.ts
 │   │   ├── file-handler.ts      # 파일 시스템 처리
 │   │   └── window-manager.ts    # 윈도우 관리
-│   ├── renderer/                # React 렌더러 프로세스
-│   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   │   ├── AppLayout.tsx      # 메인 레이아웃
-│   │   │   │   ├── TabBar.tsx         # 탭 바 컴포넌트
-│   │   │   │   ├── Tab.tsx            # 개별 탭 컴포넌트
-│   │   │   │   ├── Sidebar.tsx        # 사이드바
-│   │   │   │   ├── Toolbar.tsx        # 상단 툴바
-│   │   │   │   └── StatusBar.tsx      # 하단 상태바
-│   │   │   ├── library/
-│   │   │   │   ├── LibraryView.tsx    # 라이브러리 화면
-│   │   │   │   ├── BookCard.tsx       # 책 카드 컴포넌트
-│   │   │   │   └── BookGrid.tsx       # 책 그리드/리스트 뷰
-│   │   │   ├── reader/
-│   │   │   │   ├── ReaderView.tsx     # 읽기 화면
-│   │   │   │   ├── ReaderControls.tsx # 읽기 컨트롤 (글꼴, 테마 등)
-│   │   │   │   └── BookContent.tsx    # EPUB 콘텐츠 렌더링
-│   │   │   ├── sidebar/
-│   │   │   │   ├── SidebarContent.tsx  # 사이드바 메인
-│   │   │   │   ├── TableOfContents.tsx # 목차 컴포넌트
-│   │   │   │   ├── Bookmarks.tsx      # 북마크 컴포넌트
-│   │   │   │   ├── LibraryFilters.tsx # 라이브러리 필터
-│   │   │   │   └── SearchPanel.tsx    # 검색 패널
-│   │   │   └── settings/
-│   │   │       └── Settings.tsx       # 설정 화면
-│   │   ├── hooks/
-│   │   │   ├── useEpub.ts             # EPUB 파일 처리 훅
-│   │   │   ├── useLibrary.ts          # 라이브러리 관리 훅
-│   │   │   ├── useTabs.ts             # 탭 관리 훅
-│   │   │   └── useReader.ts           # 읽기 상태 관리 훅
-│   │   ├── store/                     # 상태 관리 (Context API 또는 Zustand)
-│   │   │   ├── tabStore.ts            # 탭 상태 관리
-│   │   │   ├── libraryStore.ts        # 라이브러리 상태 관리
-│   │   │   └── readerStore.ts         # 읽기 상태 관리
-│   │   ├── services/
-│   │   │   ├── epub-service.ts        # EPUB 파싱 서비스
-│   │   │   ├── storage/
-│   │   │   │   ├── library-storage.ts  # 라이브러리 메타데이터 저장/로드
-│   │   │   │   ├── book-storage.ts     # 책별 상세 데이터 저장/로드
-│   │   │   │   ├── settings-storage.ts # 애플리케이션 설정 저장/로드
-│   │   │   │   └── storage-utils.ts    # 저장소 유틸리티 (해시 생성 등)
-│   │   │   └── file-service.ts         # 파일 시스템 서비스
-│   │   ├── App.tsx
-│   │   └── index.tsx
-│   └── shared/                        # 공유 타입 및 유틸리티
-│       ├── types.ts
-│       └── utils.ts
+│   ├── components/              # 재사용 가능한 컴포넌트
+│   │   ├── layout/
+│   │   │   ├── AppLayout.tsx      # 메인 레이아웃
+│   │   │   ├── TabBar.tsx         # 탭 바 컴포넌트
+│   │   │   ├── Tab.tsx            # 개별 탭 컴포넌트
+│   │   │   ├── Sidebar.tsx        # 사이드바
+│   │   │   ├── Toolbar.tsx        # 상단 툴바
+│   │   │   └── StatusBar.tsx      # 하단 상태바
+│   │   ├── library/
+│   │   │   ├── BookCard.tsx       # 책 카드 컴포넌트
+│   │   │   └── BookGrid.tsx       # 책 그리드/리스트 뷰
+│   │   ├── reader/
+│   │   │   ├── ReaderControls.tsx # 읽기 컨트롤 (글꼴, 테마 등)
+│   │   │   └── BookContent.tsx    # EPUB 콘텐츠 렌더링
+│   │   ├── sidebar/
+│   │   │   ├── SidebarContent.tsx  # 사이드바 메인
+│   │   │   ├── TableOfContents.tsx # 목차 컴포넌트
+│   │   │   ├── Bookmarks.tsx      # 북마크 컴포넌트
+│   │   │   ├── LibraryFilters.tsx # 라이브러리 필터
+│   │   │   └── SearchPanel.tsx    # 검색 패널
+│   │   └── settings/
+│   │       └── SettingsForm.tsx    # 설정 폼 컴포넌트
+│   ├── pages/                   # 페이지/화면 레벨 컴포넌트
+│   │   ├── LibraryPage.tsx      # 라이브러리 화면
+│   │   ├── ReaderPage.tsx       # 읽기 화면
+│   │   └── SettingsPage.tsx     # 설정 화면
+│   ├── hooks/
+│   │   ├── useEpub.ts             # EPUB 파일 처리 훅
+│   │   ├── useLibrary.ts          # 라이브러리 관리 훅
+│   │   ├── useTabs.ts             # 탭 관리 훅
+│   │   └── useReader.ts           # 읽기 상태 관리 훅
+│   ├── store/                     # 상태 관리 (Context API 또는 Zustand)
+│   │   ├── tabStore.ts            # 탭 상태 관리
+│   │   ├── libraryStore.ts        # 라이브러리 상태 관리
+│   │   └── readerStore.ts         # 읽기 상태 관리
+│   ├── services/
+│   │   ├── epub-service.ts        # EPUB 파싱 서비스
+│   │   ├── storage/
+│   │   │   ├── library-storage.ts  # 라이브러리 메타데이터 저장/로드
+│   │   │   ├── book-storage.ts     # 책별 상세 데이터 저장/로드
+│   │   │   ├── settings-storage.ts # 애플리케이션 설정 저장/로드
+│   │   │   └── storage-utils.ts    # 저장소 유틸리티 (해시 생성 등)
+│   │   └── file-service.ts         # 파일 시스템 서비스
+│   ├── shared/                    # 공유 타입 및 유틸리티
+│   │   ├── types.ts
+│   │   └── utils.ts
+│   ├── App.tsx
+│   └── main.tsx
 ├── public/
 ├── package.json
 ├── tsconfig.json
-├── webpack.config.js                  # 또는 Vite 설정
-└── electron-builder.json              # 빌드 설정
+├── vite.config.ts                 # Vite 설정
+└── electron-builder.json          # 빌드 설정
 ```
 
 ## 5. 핵심 기능 목록
