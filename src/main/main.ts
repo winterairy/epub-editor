@@ -7,6 +7,7 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    title: 'EPUB Reader',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -41,6 +42,10 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+    // 개발 모드에서 프로세스 종료
+    if (!app.isPackaged) {
+      process.exit(0);
+    }
   }
 });
 

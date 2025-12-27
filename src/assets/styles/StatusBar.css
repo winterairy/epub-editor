@@ -1,0 +1,17 @@
+.status-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 1rem;
+  background-color: #2d2d2d;
+  border-top: 1px solid #404040;
+  height: 28px;
+  box-sizing: border-box;
+  font-size: 0.85rem;
+  color: #b0b0b0;
+  gap: 1.5rem;
+}
+
+.status-item {
+  white-space: nowrap;
+}
+
