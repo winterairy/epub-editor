@@ -1,51 +1,92 @@
-import { app, BrowserWindow } from 'electron';
-import * as path from 'path';
+import { app, BrowserWindow, Menu, dialog } from "electron";
+import * as path from "path";
 
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    title: 'EPUB Reader',
+    width: 1400,
+    height: 1000,
+    title: "EPUB Reader",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
 
-  // 개발 모드에서는 Vite 개발 서버, 프로덕션에서는 빌드된 파일
   if (!app.isPackaged) {
-    // 개발 모드: Vite 개발 서버 사용
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    // 프로덕션 모드: 빌드된 파일 사용
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: "파일",
+      submenu: [
+        {
+          label: "파일 열기...",
+          accelerator: "Ctrl+O",
+          click: async () => {
+            if (!mainWindow) return;
+
+            const { canceled, filePaths } = await dialog.showOpenDialog(
+              mainWindow,
+              {
+                title: "EPUB 파일 선택",
+                buttonLabel: "열기",
+                properties: ["openFile"],
+                filters: [
+                  { name: "EPUB 파일", extensions: ["epub"] },
+                  { name: "모든 파일", extensions: ["*"] },
+                ],
+              }
+            );
+
+            if (!canceled && filePaths.length > 0) {
+              console.log("선택한 파일:", filePaths[0]);
+              // mainWindow.webContents.send("open-epub", filePaths[0]);
+            }
+          },
+        },
+        { type: "separator" },
+        { role: "quit", label: "끝내기" },
+      ],
+    },
+    {
+      label: "보기",
+      submenu: [
+        { role: "reload", label: "새로고침" },
+        { type: "separator" },
+        { role: "togglefullscreen", label: "전체 화면 전환" },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
 
 app.whenReady().then(() => {
   createWindow();
 
-  app.on('activate', () => {
+  app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
-    // 개발 모드에서 프로세스 종료
     if (!app.isPackaged) {
       process.exit(0);
     }
   }
 });
-
