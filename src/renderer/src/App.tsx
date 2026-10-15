@@ -4,7 +4,7 @@ import type { ChainedCommands, Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import DOMPurify from "dompurify";
 import { diffLines } from "diff";
-import { monaco } from "./monaco";
+import { formatWhenReady, monaco } from "./monaco";
 import type { Command } from "../../shared/commands";
 
 type Doc = {
@@ -186,11 +186,9 @@ export function App() {
     codeEditor.current = instance;
     // 정렬만으로 바뀐 내용은 변경으로 표시하지 않도록 저장본도 함께 맞춘다.
     if (doc.kind === "html")
-      void instance
-        .getAction("editor.action.formatDocument")
-        ?.run()
-        .then(() => {
-          if (doc.text !== doc.saved || !instance.getModel()) return;
+      void formatWhenReady(instance).then((formattedOk) => {
+          if (!formattedOk || doc.text !== doc.saved || !instance.getModel())
+            return;
           const formatted = instance.getValue();
           setDocs((current) =>
             current.map((item) =>

@@ -99,3 +99,11 @@ test('작은 창에서 패널 높이가 편집 영역과 상태바를 가리지 
   const content = await page.getByRole('textbox', { name: '본문 편집' }).boundingBox();
   expect(content!.height).toBeGreaterThan(0);
 });
+
+test("코드 편집에서 HTML 블록 태그마다 줄이 나뉜다", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "코드 편집", exact: true }).click();
+  await expect(page.locator(".view-line")).toHaveCount(4);
+  await expect(page.locator(".view-line").first()).toHaveText("<h1>새로운 책</h1>");
+  await expect(page.getByText("✓ 샘플 상태", { exact: false })).toBeVisible();
+});

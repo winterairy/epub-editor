@@ -12,4 +12,17 @@ monaco.html.htmlDefaults.setOptions({
   ...monaco.html.htmlDefaults.options,
   format: { ...(monaco.html.htmlDefaults.options.format as monaco.html.HTMLFormatConfiguration), tabSize: 2, insertSpaces: true, wrapLineLength: 0 },
 })
+// HTML 포매터는 첫 HTML 모델이 생긴 뒤 비동기로 등록되므로, 준비될 때까지 기다렸다가 정렬한다.
+export async function formatWhenReady(editor: monaco.editor.IStandaloneCodeEditor, timeout = 3000): Promise<boolean> {
+  const action = editor.getAction('editor.action.formatDocument')
+  for (const start = Date.now(); action && Date.now() - start < timeout; ) {
+    if (!editor.getModel()) return false
+    if (action.isSupported()) {
+      await action.run()
+      return true
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  return false
+}
 export { monaco }
