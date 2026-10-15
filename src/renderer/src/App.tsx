@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
+import type { ChainedCommands, Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import DOMPurify from "dompurify";
 import { diffLines } from "diff";
@@ -16,6 +17,44 @@ type Doc = {
 type Panel = "changes" | "validation" | "history";
 type Activity = "explorer" | "search" | "media" | "templates";
 type Dialog = "new" | "open" | "import" | "settings" | "help" | null;
+const readFormatState = (editor: Editor) => ({
+  bold: editor.isActive("bold"),
+  italic: editor.isActive("italic"),
+  underline: editor.isActive("underline"),
+  strike: editor.isActive("strike"),
+  code: editor.isActive("code"),
+  h2: editor.isActive("heading", { level: 2 }),
+  h3: editor.isActive("heading", { level: 3 }),
+  bulletList: editor.isActive("bulletList"),
+  orderedList: editor.isActive("orderedList"),
+  blockquote: editor.isActive("blockquote"),
+});
+type FormatItem = {
+  label: string;
+  icon: React.ReactNode;
+  active?: keyof ReturnType<typeof readFormatState>;
+  run: (chain: ChainedCommands) => ChainedCommands;
+};
+const formatGroups: FormatItem[][] = [
+  [
+    { label: "굵게", icon: <b>B</b>, active: "bold", run: (c) => c.toggleBold() },
+    { label: "기울임", icon: <i>I</i>, active: "italic", run: (c) => c.toggleItalic() },
+    { label: "밑줄", icon: <u>U</u>, active: "underline", run: (c) => c.toggleUnderline() },
+    { label: "취소선", icon: <s>S</s>, active: "strike", run: (c) => c.toggleStrike() },
+    { label: "인라인 코드", icon: <code>{"</>"}</code>, active: "code", run: (c) => c.toggleCode() },
+  ],
+  [
+    { label: "소제목", icon: "H2", active: "h2", run: (c) => c.toggleHeading({ level: 2 }) },
+    { label: "작은 소제목", icon: "H3", active: "h3", run: (c) => c.toggleHeading({ level: 3 }) },
+    { label: "목록", icon: "• 목록", active: "bulletList", run: (c) => c.toggleBulletList() },
+    { label: "번호 목록", icon: "1. 목록", active: "orderedList", run: (c) => c.toggleOrderedList() },
+    { label: "인용", icon: "인용", active: "blockquote", run: (c) => c.toggleBlockquote() },
+    { label: "구분선", icon: "―", run: (c) => c.setHorizontalRule() },
+  ],
+  [
+    { label: "서식 지우기", icon: "서식 지우기", run: (c) => c.unsetAllMarks().clearNodes() },
+  ],
+];
 const initialDocs: Doc[] = [
   {
     id: "chapter1",
@@ -115,6 +154,10 @@ export function App() {
     editorProps: { attributes: { "aria-label": "본문 편집", role: "textbox" } },
     onUpdate: ({ editor }) => updateText(activeRef.current, editor.getHTML()),
   });
+  const formatState = useEditorState({
+    editor,
+    selector: ({ editor }) => (editor ? readFormatState(editor) : null),
+  });
   useEffect(() => {
     const doc = docsRef.current.find((doc) => doc.id === activeId);
     if (doc?.kind === "html" && mode === "rich")
@@ -134,11 +177,29 @@ export function App() {
       theme: "vs-dark",
       automaticLayout: true,
       minimap: { enabled: false },
+      wordWrap: "on",
+      wrappingIndent: "same",
       fontSize: 14,
       padding: { top: 20 },
       ariaLabel: doc.kind === "css" ? "CSS 코드 편집" : "HTML 코드 편집",
     });
     codeEditor.current = instance;
+    // 정렬만으로 바뀐 내용은 변경으로 표시하지 않도록 저장본도 함께 맞춘다.
+    if (doc.kind === "html")
+      void instance
+        .getAction("editor.action.formatDocument")
+        ?.run()
+        .then(() => {
+          if (doc.text !== doc.saved || !instance.getModel()) return;
+          const formatted = instance.getValue();
+          setDocs((current) =>
+            current.map((item) =>
+              item.id === doc.id
+                ? { ...item, text: formatted, saved: formatted }
+                : item,
+            ),
+          );
+        });
     const subscription = instance.onDidChangeModelContent(() =>
       updateText(doc.id, instance.getValue()),
     );
@@ -630,48 +691,26 @@ export function App() {
                   {mode === "rich" && active.kind === "html" ? (
                     <>
                       <div className="format-toolbar">
-                        <button
-                          aria-label="굵게"
-                          onClick={() =>
-                            editor?.chain().focus().toggleBold().run()
-                          }
-                        >
-                          <b>B</b>
-                        </button>
-                        <button
-                          aria-label="기울임"
-                          onClick={() =>
-                            editor?.chain().focus().toggleItalic().run()
-                          }
-                        >
-                          <i>I</i>
-                        </button>
-                        <span className="divider" />
-                        <button
-                          onClick={() =>
-                            editor
-                              ?.chain()
-                              .focus()
-                              .toggleHeading({ level: 2 })
-                              .run()
-                          }
-                        >
-                          소제목
-                        </button>
-                        <button
-                          onClick={() =>
-                            editor?.chain().focus().toggleBulletList().run()
-                          }
-                        >
-                          목록
-                        </button>
-                        <button
-                          onClick={() =>
-                            editor?.chain().focus().toggleBlockquote().run()
-                          }
-                        >
-                          인용
-                        </button>
+                        {formatGroups.map((group, index) => (
+                          <Fragment key={index}>
+                            {index > 0 && <span className="divider" />}
+                            {group.map((item) => (
+                              <button
+                                key={item.label}
+                                aria-label={item.label}
+                                title={item.label}
+                                aria-pressed={
+                                  item.active ? formatState?.[item.active] : undefined
+                                }
+                                onClick={() =>
+                                  editor && item.run(editor.chain().focus()).run()
+                                }
+                              >
+                                {item.icon}
+                              </button>
+                            ))}
+                          </Fragment>
+                        ))}
                       </div>
                       <EditorContent editor={editor} />
                     </>

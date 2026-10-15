@@ -373,6 +373,10 @@ summary {
 .format-toolbar button {
   font-size: 12px;
 }
+.format-toolbar button[aria-pressed="true"] {
+  background: #3a4553;
+  color: #f2f4f6;
+}
 .divider {
   height: 18px;
   border-left: 1px solid #46505b;
@@ -406,6 +410,21 @@ summary {
   margin-left: 0;
   padding-left: 18px;
   border-left: 3px solid var(--accent);
+}
+.tiptap h3 {
+  font-size: 18px;
+  margin-top: 32px;
+}
+.tiptap code {
+  background: #2c3540;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+.tiptap hr {
+  border: 0;
+  border-top: 1px solid #46505b;
+  margin: 32px 0;
 }
 .code-editor {
   height: 100%;
