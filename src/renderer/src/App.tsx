@@ -179,6 +179,7 @@ export function App() {
       minimap: { enabled: false },
       wordWrap: "on",
       wrappingIndent: "same",
+      fontFamily: '"D2Coding", Consolas, monospace',
       fontSize: 14,
       padding: { top: 20 },
       ariaLabel: doc.kind === "css" ? "CSS 코드 편집" : "HTML 코드 편집",

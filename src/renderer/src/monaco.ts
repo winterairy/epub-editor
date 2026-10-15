@@ -12,6 +12,8 @@ monaco.html.htmlDefaults.setOptions({
   ...monaco.html.htmlDefaults.options,
   format: { ...(monaco.html.htmlDefaults.options.format as monaco.html.HTMLFormatConfiguration), tabSize: 2, insertSpaces: true, wrapLineLength: 0 },
 })
+// 웹폰트가 늦게 로드되면 글자 폭 계산이 어긋나므로, 로드 후 다시 측정한다.
+void document.fonts.load('14px "D2Coding"').then(() => monaco.editor.remeasureFonts())
 // HTML 포매터는 첫 HTML 모델이 생긴 뒤 비동기로 등록되므로, 준비될 때까지 기다렸다가 정렬한다.
 export async function formatWhenReady(editor: monaco.editor.IStandaloneCodeEditor, timeout = 3000): Promise<boolean> {
   const action = editor.getAction('editor.action.formatDocument')

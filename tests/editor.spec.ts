@@ -107,3 +107,15 @@ test("코드 편집에서 HTML 블록 태그마다 줄이 나뉜다", async ({ p
   await expect(page.locator(".view-line").first()).toHaveText("<h1>새로운 책</h1>");
   await expect(page.getByText("✓ 샘플 상태", { exact: false })).toBeVisible();
 });
+
+test("코드 편집기는 D2Coding 글꼴을 쓴다", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "코드 편집", exact: true }).click();
+  await expect(page.locator(".view-lines")).toHaveCSS("font-family", /D2Coding/);
+  expect(
+    await page.evaluate(async () => {
+      await document.fonts.load('14px "D2Coding"');
+      return document.fonts.check('14px "D2Coding"', "가");
+    }),
+  ).toBe(true);
+});
