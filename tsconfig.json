@@ -8,6 +8,9 @@
     ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "@/*": ["./src/renderer/src/*"]
+    },
     "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,

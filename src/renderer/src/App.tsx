@@ -6,6 +6,22 @@ import DOMPurify from "dompurify";
 import { diffLines } from "diff";
 import { formatWhenReady, monaco } from "./monaco";
 import type { Command } from "../../shared/commands";
+import {
+  ArrowDownTrayIcon, Bars3BottomLeftIcon, BoldIcon, BookOpenIcon,
+  ChevronDownIcon, ChevronUpIcon, CodeBracketIcon, Cog6ToothIcon,
+  DocumentTextIcon, FolderIcon, ItalicIcon, ListBulletIcon, MagnifyingGlassIcon,
+  MinusIcon, NumberedListIcon, PhotoIcon, Squares2X2Icon, StrikethroughIcon,
+  UnderlineIcon, ViewColumnsIcon, XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
+import { IconButton } from "./components/IconButton";
+import { ChoiceSelect } from "./components/ChoiceSelect";
+import { StudioMenubar } from "./components/StudioMenubar";
+import { StudioDialogs, type DialogKind } from "./components/StudioDialogs";
 
 type Doc = {
   id: string;
@@ -16,7 +32,6 @@ type Doc = {
 };
 type Panel = "changes" | "validation" | "history";
 type Activity = "explorer" | "search" | "media" | "templates";
-type Dialog = "new" | "open" | "import" | "settings" | "help" | null;
 const readFormatState = (editor: Editor) => ({
   bold: editor.isActive("bold"),
   italic: editor.isActive("italic"),
@@ -37,22 +52,19 @@ type FormatItem = {
 };
 const formatGroups: FormatItem[][] = [
   [
-    { label: "굵게", icon: <b>B</b>, active: "bold", run: (c) => c.toggleBold() },
-    { label: "기울임", icon: <i>I</i>, active: "italic", run: (c) => c.toggleItalic() },
-    { label: "밑줄", icon: <u>U</u>, active: "underline", run: (c) => c.toggleUnderline() },
-    { label: "취소선", icon: <s>S</s>, active: "strike", run: (c) => c.toggleStrike() },
-    { label: "인라인 코드", icon: <code>{"</>"}</code>, active: "code", run: (c) => c.toggleCode() },
+    { label: "굵게", icon: <BoldIcon />, active: "bold", run: (c) => c.toggleBold() },
+    { label: "기울임", icon: <ItalicIcon />, active: "italic", run: (c) => c.toggleItalic() },
+    { label: "밑줄", icon: <UnderlineIcon />, active: "underline", run: (c) => c.toggleUnderline() },
+    { label: "취소선", icon: <StrikethroughIcon />, active: "strike", run: (c) => c.toggleStrike() },
+    { label: "인라인 코드", icon: <CodeBracketIcon />, active: "code", run: (c) => c.toggleCode() },
   ],
   [
     { label: "소제목", icon: "H2", active: "h2", run: (c) => c.toggleHeading({ level: 2 }) },
     { label: "작은 소제목", icon: "H3", active: "h3", run: (c) => c.toggleHeading({ level: 3 }) },
-    { label: "목록", icon: "• 목록", active: "bulletList", run: (c) => c.toggleBulletList() },
-    { label: "번호 목록", icon: "1. 목록", active: "orderedList", run: (c) => c.toggleOrderedList() },
-    { label: "인용", icon: "인용", active: "blockquote", run: (c) => c.toggleBlockquote() },
-    { label: "구분선", icon: "―", run: (c) => c.setHorizontalRule() },
-  ],
-  [
-    { label: "서식 지우기", icon: "서식 지우기", run: (c) => c.unsetAllMarks().clearNodes() },
+    { label: "목록", icon: <ListBulletIcon />, active: "bulletList", run: (c) => c.toggleBulletList() },
+    { label: "번호 목록", icon: <NumberedListIcon />, active: "orderedList", run: (c) => c.toggleOrderedList() },
+    { label: "인용", icon: <Bars3BottomLeftIcon />, active: "blockquote", run: (c) => c.toggleBlockquote() },
+    { label: "구분선", icon: <MinusIcon />, run: (c) => c.setHorizontalRule() },
   ],
 ];
 const initialDocs: Doc[] = [
@@ -115,7 +127,7 @@ export function App() {
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     Math.min(360, Math.max(180, readSize("sidebar-width", 240))),
   );
-  const [dialog, setDialog] = useState<Dialog>(null);
+  const [dialog, setDialog] = useState<DialogKind>(null);
   const [book, setBook] = useState({
     title: "이야기의 시작",
     author: "나의 이름",
@@ -133,7 +145,6 @@ export function App() {
   const [history, setHistory] = useState<string[]>([]);
   const [validation, setValidation] = useState(false);
   const [notice, setNotice] = useState("UI 프로토타입 · 샘플 프로젝트");
-  const [menu, setMenu] = useState<string | null>(null);
   const active = docs.find((doc) => doc.id === activeId);
   const activeRef = useRef(activeId);
   activeRef.current = activeId;
@@ -141,7 +152,8 @@ export function App() {
   docsRef.current = docs;
   const codeContainer = useRef<HTMLDivElement>(null);
   const codeEditor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogReturnFocus = useRef<HTMLElement | null>(null);
+  const panelClickWasOpen = useRef(false);
   const commandRef = useRef<(command: Command) => void>(() => {});
   const dirty = docs.some((doc) => doc.text !== doc.saved);
   const updateText = (id: string, text: string) =>
@@ -219,10 +231,6 @@ export function App() {
     }
   }, [panelHeight, sidebarWidth]);
   useEffect(() => {
-    if (dialog) dialogRef.current?.showModal();
-    else dialogRef.current?.close();
-  }, [dialog]);
-  useEffect(() => {
     const listener = () => setViewportHeight(window.innerHeight);
     window.addEventListener("resize", listener);
     return () => window.removeEventListener("resize", listener);
@@ -264,7 +272,6 @@ export function App() {
     setPanel(next);
   }
   function command(command: Command) {
-    setMenu(null);
     if (
       command === "new" ||
       command === "open" ||
@@ -272,6 +279,7 @@ export function App() {
       command === "settings" ||
       command === "help"
     ) {
+      dialogReturnFocus.current = document.activeElement as HTMLElement | null;
       setTitleDraft(command === "settings" ? book.title : "");
       setAuthorDraft(book.author);
       setLanguageDraft(book.language);
@@ -328,11 +336,6 @@ export function App() {
     element.addEventListener("pointercancel", stop);
   }
   function newBook() {
-    if (
-      (dirty || history.length) &&
-      !window.confirm("현재 데모의 편집 내용과 기록을 지우고 새 책을 만들까요?")
-    )
-      return;
     const title = titleDraft.trim() || "새로운 책";
     const text = `<h1>${DOMPurify.sanitize(title, { ALLOWED_TAGS: [] })}</h1><p>${template === "빈 책" ? "첫 문장을 작성해 보세요." : "템플릿으로 이야기를 시작해 보세요."}</p>`;
     setDocs([{ ...initialDocs[0], text, saved: text }, initialDocs[2]]);
@@ -364,59 +367,14 @@ export function App() {
     );
     setPanel("history");
   }
-  const menuGroups: Record<string, [string, Command][]> = {
-    파일: [
-      ["새 책…", "new"],
-      ["열기…", "open"],
-      ["DOCX 가져오기…", "import"],
-      ["저장 (데모)", "save"],
-      ["EPUB/PDF 내보내기…", "export"],
-    ],
-    편집: [["책 전체 검색", "search"]],
-    보기: [
-      ["사이드바 표시/숨기기", "sidebar"],
-      ["하단 패널 표시/숨기기", "panel"],
-      ["미리보기 표시/숨기기", "preview"],
-    ],
-    책: [
-      ["메타데이터·표지·목차", "settings"],
-      ["템플릿·스타일", "templates"],
-    ],
-    도구: [
-      ["책 검증 (데모)", "validate"],
-      ["변경 내용 확인", "changes"],
-    ],
-    도움말: [["사용 안내", "help"]],
-  };
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="studio">
       <header className="titlebar">
         <span className="brand">
-          ▣ <b>EPUB STUDIO</b>
+          <BookOpenIcon className="size-5" aria-hidden="true" /> <b>EPUB STUDIO</b>
         </span>
-        {!window.desktop && (
-          <nav aria-label="브라우저용 메뉴">
-            {Object.keys(menuGroups).map((label) => (
-              <div className="menu-group" key={label}>
-                <button
-                  aria-expanded={menu === label}
-                  onClick={() => setMenu(menu === label ? null : label)}
-                >
-                  {label}
-                </button>
-                {menu === label && (
-                  <div className="menu-popup">
-                    {menuGroups[label].map(([text, action]) => (
-                      <button key={action} onClick={() => command(action)}>
-                        {text}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav>
-        )}
+        {!window.desktop && <StudioMenubar onCommand={command} />}
         <span className="book-title">{book.title} — 작업실</span>
         <span className="prototype-badge">UI PROTOTYPE</span>
       </header>
@@ -424,17 +382,17 @@ export function App() {
         <nav className="activitybar" aria-label="활동 바">
           {(
             [
-              ["explorer", "▤", "책 탐색기"],
-              ["search", "⌕", "전체 검색"],
-              ["media", "▧", "미디어"],
-              ["templates", "▦", "템플릿"],
+              ["explorer", FolderIcon, "책 탐색기"],
+              ["search", MagnifyingGlassIcon, "전체 검색"],
+              ["media", PhotoIcon, "미디어"],
+              ["templates", Squares2X2Icon, "템플릿"],
             ] as const
-          ).map(([id, icon, label]) => (
-            <button
+          ).map(([id, Icon, label]) => (
+            <IconButton
               key={id}
               className={activity === id && sidebar ? "active" : ""}
-              title={label}
-              aria-label={label}
+              label={label}
+              side="right"
               aria-pressed={activity === id && sidebar}
               onClick={() => {
                 if (activity === id) setSidebar((value) => !value);
@@ -444,17 +402,17 @@ export function App() {
                 }
               }}
             >
-              {icon}
-            </button>
+              <Icon className="size-6" aria-hidden="true" />
+            </IconButton>
           ))}
-          <button
+          <IconButton
             className="settings-button"
-            aria-label="책 설정"
-            title="책 설정"
+            label="책 설정"
+            side="right"
             onClick={() => command("settings")}
           >
-            ⚙
-          </button>
+            <Cog6ToothIcon className="size-6" aria-hidden="true" />
+          </IconButton>
         </nav>
         {sidebar && (
           <>
@@ -470,12 +428,12 @@ export function App() {
                     }[activity]
                   }
                 </span>
-                <button
-                  aria-label="사이드바 접기"
+                <IconButton
+                  label="사이드바 접기"
                   onClick={() => setSidebar(false)}
                 >
-                  ×
-                </button>
+                  <XMarkIcon aria-hidden="true" />
+                </IconButton>
               </div>
               {activity === "explorer" && (
                 <>
@@ -485,18 +443,18 @@ export function App() {
                     {docs
                       .filter((doc) => doc.kind === "html")
                       .map((doc) => (
-                        <button
+                        <Button variant="ghost"
                           className={`tree-file ${activeId === doc.id ? "selected" : ""}`}
                           key={doc.id}
                           aria-label={doc.name}
                           onClick={() => openDoc(doc.id)}
                         >
-                          <span className="file-icon">◇</span>
+                          <DocumentTextIcon className="file-icon size-4" aria-hidden="true" />
                           {doc.name}
                           {doc.text !== doc.saved && (
                             <span className="dirty-dot">●</span>
                           )}
-                        </button>
+                        </Button>
                       ))}
                   </details>
                   <details open>
@@ -504,15 +462,15 @@ export function App() {
                     {docs
                       .filter((doc) => doc.kind === "css")
                       .map((doc) => (
-                        <button
+                        <Button variant="ghost"
                           key={doc.id}
                           className={`tree-file ${activeId === doc.id ? "selected" : ""}`}
                           aria-label={doc.name}
                           onClick={() => openDoc(doc.id)}
                         >
-                          <span className="file-icon css">#</span>
+                          <CodeBracketIcon className="file-icon css size-4" aria-hidden="true" />
                           {doc.name}
-                        </button>
+                        </Button>
                       ))}
                   </details>
                   <details>
@@ -521,17 +479,17 @@ export function App() {
                       미디어를 첨부하면 여기에 표시됩니다.
                     </p>
                   </details>
-                  <button
+                  <Button variant="ghost"
                     className="sidebar-action"
                     onClick={() => command("settings")}
                   >
                     책 정보 설정
-                  </button>
+                  </Button>
                 </>
               )}
               {activity === "search" && (
                 <>
-                  <input
+                  <Input
                     autoFocus
                     aria-label="책 전체 검색어"
                     placeholder="책에서 찾기…"
@@ -543,14 +501,14 @@ export function App() {
                     docs
                       .filter((doc) => plainText(doc.text).includes(search))
                       .map((doc) => (
-                        <button
+                        <Button variant="ghost"
                           className="search-result"
                           key={doc.id}
                           onClick={() => openDoc(doc.id)}
                         >
                           {doc.name}
                           <small>{plainText(doc.text).slice(0, 80)}</small>
-                        </button>
+                        </Button>
                       ))}
                   {search &&
                     !docs.some((doc) =>
@@ -560,35 +518,35 @@ export function App() {
               )}
               {activity === "media" && (
                 <div className="sidebar-note">
-                  <div className="empty-icon">▧</div>
+                  <PhotoIcon className="empty-icon size-10" aria-hidden="true" />
                   <h3>책에 장면을 더하세요</h3>
                   <p className="muted">
                     이미지와 GIF를 관리할 공간입니다. 첨부 기능은 후속
                     개발됩니다.
                   </p>
-                  <button
+                  <Button variant="ghost"
                     onClick={() =>
                       setNotice("미디어 첨부는 후속 개발 예정입니다.")
                     }
                   >
                     미디어 첨부 (예정)
-                  </button>
+                  </Button>
                 </div>
               )}
               {activity === "templates" && (
                 <div className="template-list">
                   {["빈 책", "소설", "에세이"].map((name) => (
-                    <button
+                    <Button variant="ghost"
                       key={name}
                       onClick={() => {
+                        command("new");
                         setTemplate(name);
-                        setDialog("new");
                       }}
                     >
-                      <span>▤</span>
+                      <BookOpenIcon className="size-6" aria-hidden="true" />
                       <b>{name}</b>
                       <small>새 책에 적용 · 데모</small>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -620,8 +578,8 @@ export function App() {
             />
           </>
         )}
-        <div className="main-column">
-          <div className="file-tabs" role="tablist" aria-label="파일 탭">
+        <Tabs value={activeId} onValueChange={setActiveId} className="main-column">
+          <TabsList className="file-tabs" aria-label="파일 탭" variant="line">
             {tabs.map((id) => {
               const doc = docs.find((doc) => doc.id === id)!;
               return (
@@ -629,58 +587,50 @@ export function App() {
                   key={id}
                   className={`file-tab ${activeId === id ? "selected" : ""}`}
                 >
-                  <button
-                    role="tab"
-                    aria-selected={activeId === id}
-                    onClick={() => setActiveId(id)}
-                  >
-                    {doc.kind === "css" ? "#" : "◇"} {doc.name}
+                  <TabsTrigger value={id}>
+                    {doc.kind === "css" ? <CodeBracketIcon aria-hidden="true" /> : <DocumentTextIcon aria-hidden="true" />} {doc.name}
                     {doc.text !== doc.saved && " ●"}
-                  </button>
-                  <button
-                    aria-label={`${doc.name} 닫기`}
+                  </TabsTrigger>
+                  <IconButton
+                    label={`${doc.name} 닫기`}
                     onClick={() => closeTab(id)}
                   >
-                    ×
-                  </button>
+                    <XMarkIcon aria-hidden="true" />
+                  </IconButton>
                 </div>
               );
             })}
-          </div>
+          </TabsList>
           {active ? (
-            <>
+            <TabsContent value={activeId} forceMount className="document-content" aria-label={`${active.name} 편집 작업 공간`}>
               <div className="editor-toolbar">
                 <span className="breadcrumb">본문 / {active.name}</span>
-                <div className="mode-switch">
+                <ToggleGroup type="single" value={mode} onValueChange={(value) => {
+                  if (value === "rich" || value === "code") command(value);
+                }} className="mode-switch" aria-label="편집 모드" size="sm">
                   {active.kind === "html" && (
                     <>
-                      <button
-                        className={mode === "rich" ? "selected" : ""}
-                        onClick={() => command("rich")}
-                      >
-                        일반 편집
-                      </button>
-                      <button
-                        className={mode === "code" ? "selected" : ""}
-                        onClick={() => command("code")}
-                      >
-                        코드 편집
-                      </button>
+                      <ToggleGroupItem value="rich">
+                        <DocumentTextIcon aria-hidden="true" /> 일반 편집
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="code">
+                        <CodeBracketIcon aria-hidden="true" /> 코드 편집
+                      </ToggleGroupItem>
                     </>
                   )}
-                </div>
-                <button
+                </ToggleGroup>
+                <Button variant="ghost" size="sm"
                   aria-pressed={preview}
                   onClick={() => command("preview")}
                 >
-                  ◫ 미리보기
-                </button>
-                <button
+                  <ViewColumnsIcon aria-hidden="true" /> 미리보기
+                </Button>
+                <Button variant="ghost"
                   className="primary small"
                   onClick={() => command("export")}
                 >
-                  내보내기
-                </button>
+                  <ArrowDownTrayIcon aria-hidden="true" /> 내보내기
+                </Button>
               </div>
               <div className="editing-split">
                 <section
@@ -694,19 +644,20 @@ export function App() {
                           <Fragment key={index}>
                             {index > 0 && <span className="divider" />}
                             {group.map((item) => (
-                              <button
+                              <IconButton
                                 key={item.label}
-                                aria-label={item.label}
-                                title={item.label}
+                                label={item.label}
                                 aria-pressed={
-                                  item.active ? formatState?.[item.active] : undefined
+                                  item.active ? Boolean(formatState?.[item.active]) : undefined
                                 }
+                                disabled={!editor}
+                                onMouseDown={(event) => event.preventDefault()}
                                 onClick={() =>
                                   editor && item.run(editor.chain().focus()).run()
                                 }
                               >
                                 {item.icon}
-                              </button>
+                              </IconButton>
                             ))}
                           </Fragment>
                         ))}
@@ -737,17 +688,21 @@ export function App() {
                   </aside>
                 )}
               </div>
-            </>
+            </TabsContent>
           ) : (
             <div className="welcome">
-              <div className="empty-icon">▣</div>
+              <BookOpenIcon className="empty-icon size-10" aria-hidden="true" />
               <h1>당신의 이야기를 책으로</h1>
               <p>새 책을 시작하거나 탐색기에서 장을 선택하세요.</p>
-              <button onClick={() => command("new")}>새 책 만들기</button>
-              <button onClick={() => command("open")}>최근 프로젝트</button>
-              <button onClick={() => command("import")}>DOCX 가져오기</button>
+              <Button variant="ghost" onClick={() => command("new")}>새 책 만들기</Button>
+              <Button variant="ghost" onClick={() => command("open")}>최근 프로젝트</Button>
+              <Button variant="ghost" onClick={() => command("import")}>DOCX 가져오기</Button>
             </div>
           )}
+          <Tabs asChild value={panel} onValueChange={(value) => {
+            setPanel(value as Panel);
+            setPanelOpen(true);
+          }}>
           <section className="bottom-panel" aria-label="하단 패널">
             {panelOpen && (
               <div
@@ -777,41 +732,45 @@ export function App() {
                 }}
               />
             )}
-            <div
-              className="panel-tabs"
-              role="tablist"
-              aria-label="하단 패널 탭"
-            >
+            <div className="panel-tabs">
+            <TabsList aria-label="하단 패널 탭" variant="line" className="panel-tab-list">
               {(Object.keys(labels) as Panel[]).map((id) => (
-                <button
+                <TabsTrigger
                   key={id}
-                  id={`tab-${id}`}
-                  role="tab"
-                  aria-selected={panel === id}
+                  value={id}
                   aria-expanded={panel === id && panelOpen}
-                  aria-controls="panel-content"
                   className={panel === id && panelOpen ? "selected" : ""}
-                  onClick={() => showPanel(id)}
+                  onPointerDown={() => { panelClickWasOpen.current = panel === id && panelOpen; }}
+                  onClick={() => {
+                    setPanel(id);
+                    setPanelOpen(!panelClickWasOpen.current);
+                    panelClickWasOpen.current = false;
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      showPanel(id);
+                    }
+                  }}
                 >
                   {labels[id]}
                   {id === "changes" && (
                     <span className="count">{changedDocs.length}</span>
                   )}
-                </button>
+                </TabsTrigger>
               ))}
-              <button
+            </TabsList>
+              <IconButton
                 className="panel-toggle"
-                aria-label={panelOpen ? "하단 패널 접기" : "하단 패널 펼치기"}
+                label={panelOpen ? "하단 패널 접기" : "하단 패널 펼치기"}
                 onClick={() => setPanelOpen((value) => !value)}
               >
-                {panelOpen ? "⌄" : "⌃"}
-              </button>
+                {panelOpen ? <ChevronDownIcon aria-hidden="true" /> : <ChevronUpIcon aria-hidden="true" />}
+              </IconButton>
             </div>
             {panelOpen && (
-              <div
-                id="panel-content"
-                role="tabpanel"
-                aria-labelledby={`tab-${panel}`}
+              <TabsContent
+                value={panel}
                 className="panel-content"
                 style={{ height: visiblePanelHeight }}
               >
@@ -829,22 +788,13 @@ export function App() {
                           출력은 하지 않습니다.
                         </p>
                       </div>
-                      <label>
-                        출력 형식{" "}
-                        <select
-                          aria-label="출력 형식"
-                          value={format}
-                          onChange={(event) =>
-                            setFormat(event.target.value as "EPUB" | "PDF")
-                          }
-                        >
-                          <option>EPUB</option>
-                          <option>PDF</option>
-                        </select>
-                      </label>
-                      <button className="primary" onClick={demoExport}>
+                      <div className="export-format">
+                        <span id="export-format-label">출력 형식</span>
+                        <ChoiceSelect label="출력 형식" value={format} onValueChange={(value) => setFormat(value as "EPUB" | "PDF")} options={["EPUB", "PDF"].map((value) => ({ value, label: value }))} />
+                      </div>
+                      <Button variant="ghost" className="primary" onClick={demoExport}>
                         확인 후 내보내기 (데모)
-                      </button>
+                      </Button>
                     </div>
                     {!changedDocs.length ? (
                       <p className="muted">
@@ -896,12 +846,12 @@ export function App() {
                           EPUBCheck는 실행하지 않습니다.
                         </p>
                       </div>
-                      <button onClick={() => setValidation(true)}>
+                      <Button variant="ghost" onClick={() => setValidation(true)}>
                         검증 실행 (데모)
-                      </button>
+                      </Button>
                     </div>
                     {validation ? (
-                      <button
+                      <Button variant="ghost"
                         className="validation-row"
                         onClick={() => {
                           openDoc("chapter1");
@@ -910,7 +860,7 @@ export function App() {
                       >
                         ⓘ 1장.xhtml · 표지를 설정해 보세요.{" "}
                         <span>샘플 안내</span>
-                      </button>
+                      </Button>
                     ) : (
                       <p className="muted">
                         검증을 실행하면 결과와 파일 위치를 표시합니다.
@@ -932,10 +882,11 @@ export function App() {
                     )}
                   </>
                 )}
-              </div>
+              </TabsContent>
             )}
           </section>
-        </div>
+          </Tabs>
+        </Tabs>
       </div>
       <footer className="statusbar">
         <span role="status">
@@ -952,157 +903,36 @@ export function App() {
               ? "코드 편집"
               : "일반 편집"}
           </span>
-          <button onClick={() => command("export")}>{format} ▴</button>
+          <Button variant="ghost" onClick={() => command("export")}>{format} <ChevronUpIcon aria-hidden="true" /></Button>
         </div>
       </footer>
-      <dialog
-        ref={dialogRef}
-        onCancel={() => setDialog(null)}
+      <StudioDialogs
+        kind={dialog}
+        draft={{ title: titleDraft, author: authorDraft, language: languageDraft, template }}
+        bookTitle={book.title}
+        hasEdits={dirty || history.length > 0}
+        returnFocus={dialogReturnFocus}
+        onChange={(draft) => {
+          if (draft.title !== undefined) setTitleDraft(draft.title);
+          if (draft.author !== undefined) setAuthorDraft(draft.author);
+          if (draft.language !== undefined) setLanguageDraft(draft.language);
+          if (draft.template !== undefined) setTemplate(draft.template);
+        }}
         onClose={() => setDialog(null)}
-        aria-labelledby="dialog-title"
-      >
-        <div className="dialog-heading">
-          <h2 id="dialog-title">
-            {
-              {
-                new: "새 책 만들기",
-                open: "최근 프로젝트",
-                import: "Word 원고 가져오기",
-                settings: "책 설정",
-                help: "EPUB Studio 안내",
-              }[dialog ?? "help"]
-            }
-          </h2>
-          <button aria-label="대화상자 닫기" onClick={() => setDialog(null)}>
-            ×
-          </button>
-        </div>
-        {dialog === "new" && (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              newBook();
-            }}
-          >
-            <label>
-              책 제목
-              <input
-                autoFocus
-                value={titleDraft}
-                onChange={(event) => setTitleDraft(event.target.value)}
-                placeholder="새로운 책"
-              />
-            </label>
-            <label>
-              기본 템플릿
-              <select
-                value={template}
-                onChange={(event) => setTemplate(event.target.value)}
-              >
-                {["빈 책", "소설", "에세이"].map((name) => (
-                  <option key={name}>{name}</option>
-                ))}
-              </select>
-            </label>
-            <p className="muted">
-              데모 문서를 만듭니다. 디스크에 저장하지 않습니다.
-            </p>
-            <button className="primary">책 만들기 (데모)</button>
-          </form>
-        )}
-        {dialog === "open" && (
-          <>
-            <p className="muted">
-              최근 프로젝트 목록 예시입니다. 실제 경로는 읽지 않습니다.
-            </p>
-            <button
-              className="recent-card"
-              onClick={() => {
-                openDoc("chapter1");
-                setDialog(null);
-                setNotice("현재 샘플 프로젝트를 열었습니다.");
-              }}
-            >
-              <b>{book.title}</b>
-              <small>샘플 프로젝트 · 현재 세션</small>
-            </button>
-          </>
-        )}
-        {dialog === "import" && (
-          <>
-            <div className="import-placeholder">DOCX 원고를 가져올 공간</div>
-            <p>
-              Mammoth로 문단·제목·이미지를 가져오는 기능은 후속 단계에서
-              구현합니다.
-            </p>
-            <button
-              onClick={() =>
-                setNotice(
-                  "DOCX 가져오기 화면 데모입니다. 파일은 읽지 않았습니다.",
-                )
-              }
-            >
-              파일 선택 (예정)
-            </button>
-          </>
-        )}
-        {dialog === "settings" && (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setBook((current) => ({
-                ...current,
-                title: titleDraft.trim() || current.title,
-                author: authorDraft,
-                language: languageDraft,
-              }));
-              setDialog(null);
-              setNotice("책 정보 변경 데모 · OPF 저장은 후속 구현");
-            }}
-          >
-            <label>
-              책 제목
-              <input
-                value={titleDraft}
-                onChange={(event) => setTitleDraft(event.target.value)}
-              />
-            </label>
-            <label>
-              저자
-              <input
-                value={authorDraft}
-                onChange={(event) => setAuthorDraft(event.target.value)}
-              />
-            </label>
-            <label>
-              언어
-              <select
-                value={languageDraft}
-                onChange={(event) => setLanguageDraft(event.target.value)}
-              >
-                <option value="ko">한국어</option>
-                <option value="en">영어</option>
-              </select>
-            </label>
-            <p className="muted">표지와 목차의 세부 설정은 후속 구현됩니다.</p>
-            <button className="primary">적용 (데모)</button>
-          </form>
-        )}
-        {dialog === "help" && (
-          <>
-            <p>로컬 전자책 작업실 UI 프로토타입입니다.</p>
-            <p>
-              탐색기 → 편집 → 변경 확인 → 내보내기 흐름을 확인할 수 있습니다.
-            </p>
-            <p>Ctrl+B: 사이드바 · Ctrl+J: 하단 패널 · Ctrl+S: 저장 데모</p>
-            <p className="muted">
-              프로젝트 저장·DOCX 가져오기·미디어·실제 EPUB/PDF 출력은 아직
-              제공하지 않습니다. 코드에서 일반 편집으로 전환하면 지원하지 않는
-              태그가 유실될 수 있습니다.
-            </p>
-          </>
-        )}
-      </dialog>
+        onCreate={newBook}
+        onApply={() => {
+          setBook((current) => ({ ...current, title: titleDraft.trim() || current.title, author: authorDraft, language: languageDraft }));
+          setDialog(null);
+          setNotice("책 정보 변경 데모 · OPF 저장은 후속 구현");
+        }}
+        onOpenSample={() => {
+          openDoc("chapter1");
+          setDialog(null);
+          setNotice("현재 샘플 프로젝트를 열었습니다.");
+        }}
+        onImport={() => setNotice("DOCX 가져오기 화면 데모입니다. 파일은 읽지 않았습니다.")}
+      />
     </div>
+    </TooltipProvider>
   );
 }

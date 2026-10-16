@@ -1,0 +1,78 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  *, ::before, ::after {
+    border: 0 solid var(--border);
+  }
+  [data-slot] {
+    box-sizing: border-box;
+  }
+  button, input {
+    color: inherit;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  [data-slot="dialog-title"], [data-slot="dialog-description"],
+  [data-slot="alert-dialog-title"], [data-slot="alert-dialog-description"] {
+    margin: 0;
+  }
+}
+
+:root {
+  --background: #171c22;
+  --foreground: #cdd4dc;
+  --card: #202730;
+  --card-foreground: #e1e7ed;
+  --popover: #252e39;
+  --popover-foreground: #e1e7ed;
+  --primary: #7ebda7;
+  --primary-foreground: #10231c;
+  --secondary: #29333e;
+  --secondary-foreground: #e1e7ed;
+  --muted: #29333e;
+  --muted-foreground: #a3adb9;
+  --accent: #35434a;
+  --accent-foreground: #edf6f2;
+  --destructive: #e78490;
+  --border: #46515e;
+  --input: #46515e;
+  --ring: #78b5a0;
+  --radius: 0.375rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}

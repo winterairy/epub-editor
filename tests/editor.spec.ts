@@ -6,10 +6,10 @@ test("일반 편집과 로컬 Monaco 코드 편집이 연결된다", async ({ pa
   const editor = page.getByRole("textbox", { name: "본문 편집" });
   await expect(editor).toContainText("새로운 책");
   await editor.fill("한글 원고 테스트");
-  await page.getByRole("button", { name: "코드 편집", exact: true }).click();
+  await page.getByRole("radio", { name: "코드 편집", exact: true }).click();
   await expect(page.locator(".monaco-editor")).toBeVisible();
   await expect(page.locator(".view-lines")).toContainText("한글 원고 테스트");
-  await page.getByRole("button", { name: "일반 편집", exact: true }).click();
+  await page.getByRole("radio", { name: "일반 편집", exact: true }).click();
   await expect(editor).toContainText("한글 원고 테스트");
   expect(errors).toEqual([]);
 });
@@ -18,20 +18,21 @@ test("하단 패널 전환·접기와 형식별 출력 데모", async ({ page })
   await page.goto("/");
   const changes = page.getByRole("tab", { name: "변경 내용" });
   await changes.click();
-  await expect(page.getByRole("tabpanel")).toContainText("첫 내보내기");
+  await expect(page.getByRole("region", { name: "하단 패널", exact: true }).getByRole("tabpanel")).toContainText("첫 내보내기");
   await page.getByRole("button", { name: "확인 후 내보내기 (데모)" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("파일 생성 없음");
+  await expect(page.getByRole("region", { name: "하단 패널", exact: true }).getByRole("tabpanel")).toContainText("파일 생성 없음");
   await changes.click();
-  await expect(page.getByRole("tabpanel")).toContainText(
+  await expect(page.getByRole("region", { name: "하단 패널", exact: true }).getByRole("tabpanel")).toContainText(
     "변경된 내용이 없습니다",
   );
-  await page.getByLabel("출력 형식").selectOption("PDF");
-  await expect(page.getByRole("tabpanel")).toContainText("첫 내보내기");
+  await page.getByRole("combobox", { name: "출력 형식" }).click();
+  await page.getByRole("option", { name: "PDF", exact: true }).click();
+  await expect(page.getByRole("region", { name: "하단 패널", exact: true }).getByRole("tabpanel")).toContainText("첫 내보내기");
   await changes.click();
-  await expect(page.getByRole("tabpanel")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "하단 패널", exact: true }).getByRole("tabpanel")).toHaveCount(0);
   await page.getByRole("tab", { name: "검증 결과" }).click();
   await page.getByRole("button", { name: "검증 실행 (데모)" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("샘플 안내");
+  await expect(page.getByRole("region", { name: "하단 패널", exact: true }).getByRole("tabpanel")).toContainText("샘플 안내");
   const separator = page.getByRole("separator", { name: "하단 패널 높이" });
   const before = await separator.getAttribute("aria-valuenow");
   await separator.focus();
@@ -62,10 +63,11 @@ test("파일별 편집 내용과 탭 닫기·다시 열기", async ({ page }) =>
 
 test("브라우저 메뉴, 새 책과 검색, 레이아웃 설정 유지", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "파일", exact: true }).click();
-  await page.getByRole("button", { name: "새 책…", exact: true }).click();
+  await page.getByRole("menuitem", { name: "파일", exact: true }).click();
+  await page.getByRole("menuitem", { name: "새 책…", exact: true }).click();
   await page.getByLabel("책 제목", { exact: true }).fill("나의 에세이");
-  await page.getByLabel("기본 템플릿").selectOption("에세이");
+  await page.getByRole("combobox", { name: "기본 템플릿" }).click();
+  await page.getByRole("option", { name: "에세이", exact: true }).click();
   await page.getByRole("button", { name: "책 만들기 (데모)" }).click();
   await expect(page.getByRole("textbox", { name: "본문 편집" })).toContainText(
     "나의 에세이",
@@ -102,7 +104,7 @@ test('작은 창에서 패널 높이가 편집 영역과 상태바를 가리지 
 
 test("코드 편집에서 HTML 블록 태그마다 줄이 나뉜다", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "코드 편집", exact: true }).click();
+  await page.getByRole("radio", { name: "코드 편집", exact: true }).click();
   await expect(page.locator(".view-line")).toHaveCount(4);
   await expect(page.locator(".view-line").first()).toHaveText("<h1>새로운 책</h1>");
   await expect(page.getByText("✓ 샘플 상태", { exact: false })).toBeVisible();
@@ -110,7 +112,7 @@ test("코드 편집에서 HTML 블록 태그마다 줄이 나뉜다", async ({ p
 
 test("코드 편집기는 D2Coding 글꼴을 쓴다", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "코드 편집", exact: true }).click();
+  await page.getByRole("radio", { name: "코드 편집", exact: true }).click();
   await expect(page.locator(".view-lines")).toHaveCSS("font-family", /D2Coding/);
   expect(
     await page.evaluate(async () => {
